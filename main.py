@@ -6,32 +6,50 @@ import sys
 import torch
 import torch.nn as nn
 
-# read data
+
+def normalize_data(data):
+    # Assuming that data is a pd.Series object.
+    norm_data = (data-data.mean())/data.std()
+    return norm_data
+
+
+# def partition_data([data, labels], )
+
+
+# Reading and loading data as pandas Dataframe.
 print('Loading data')
-dir_path = '/Users/bellanicholson/Desktop/DA Case - Real Estate Analytics'
-file_path = os.path.join(dir_path, 
-						 'Staten_Island_housing_market_case.xlsx')
-save_path = os.path.join(dir_path, 'figures')
-houses_price = pd.read_csv("Staten_Island_housing_market_case.csv", low_memory=False)
+current_dir = os.getcwd() 
+data_path = os.path.join(current_dir,
+                        'data',
+                        'Staten_Island_housing_market_case.csv')
+houses_price = pd.read_csv(data_path, low_memory=False)
 print('File loaded.')
 
+# Create necessary directories if they don't already exist.
+directories = ['figures', 'models']
+for directory in directories:
+    if not os.path.exists(directory):
+        os.makedirs(os.path.join(current_dir, directory))
 
-# Clean data and drop unnecessary attributes.
-recent_prices = houses_price[houses_price.year == 2013] # Only consider one year
+
+print('Pre-processing data.')
+# Separate dataset into data and labels.
+recent_prices = houses_price[houses_price.year == 2013] # Filter data by year.
 labels, recent_prices = recent_prices.price, recent_prices.drop(columns=['price', 'Sale_id', 'bbl_id', 'year']).select_dtypes(['number'])
+label_std = labels.std()  # Save original std for later.
 # Normalize data
-recent_prices = (recent_prices-recent_prices.mean())/recent_prices.std()
-recent_prices = recent_prices.fillna(-1.0)
-label_std = labels.std()  # Save for later.
-labels = ((labels-labels.mean())/labels.std())
-# Convert to Torch Tensor.
+recent_prices = normalize_data(recent_prices).fillna(-1.0)
+labels = normalize_data(labels)
+# Convert to Torch tensors.
 labels, recent_prices = torch.from_numpy(labels.to_numpy()).float(), torch.from_numpy(recent_prices.to_numpy()).float()
+sys.exit(1)
 
-
+# TODO: create a partition dataset function.
 # Partition dataset: 80% train, 20% test
 training_indx = int(np.round(recent_prices.shape[0]*0.8))
 train_data, train_labels = recent_prices[:training_indx], labels[:training_indx]
 test_data, test_labels = recent_prices[training_indx+1:], labels[training_indx+1:]
+print('Done pre-processing data.')
 
 # Defining model
 input_dim = recent_prices.size()[1]
