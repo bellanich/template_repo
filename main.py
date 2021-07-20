@@ -18,6 +18,7 @@ def partition_data(data, labels, training_percent=0.80):
     # Throw error if dim of data doesn't match that of labels. (Partitions generated will be nonsense otherwise.)
     if data.shape[0] != labels.shape[0]:
         raise ValueError('Dimensions of data and labels do not match.')
+
     # Calculate where we 'cut' the dataset into training and testing data.
     datapoints_num = data.shape[0]
     training_indx = int(np.round(datapoints_num*training_percent))
@@ -27,6 +28,14 @@ def partition_data(data, labels, training_percent=0.80):
     test_data, test_labels = recent_prices[training_indx+1:], labels[training_indx+1:]
     return [train_data, train_labels], [test_data, test_labels]
 
+
+def make_dataloader(dataset, batch_size=64, shuffling=True):
+    # Assumptions: dataset = [data, labels].
+    # We take our dataset and convert it into a PyTorch dataloader.
+    data, labels = dataset[0], dataset[1]
+    tensor_dataset = torch.utils.data.TensorDataset(data, labels) 
+    my_dataloader = torch.utils.data.DataLoader(tensor_dataset, batch_size=batch_size, shuffle=shuffling)
+    return my_dataloader
 
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
@@ -56,30 +65,22 @@ labels, recent_prices = torch.from_numpy(labels.to_numpy()).float(), torch.from_
 # Split dataset into two lists of [data_partion, labels].
 train_dataset, test_dataset = partition_data(data=recent_prices, labels=labels, training_percent=0.8)
 
+train_dataloader = make_dataloader(train_dataset)
+test_data, test_labels = test_dataset[0], test_dataset[1]
 
-# Creating dataset. TODO: fixme....
-print("Fix the way that we're initializing the TensorDataset. It's really ugly right now.")
-training_data = torch.utils.data.TensorDataset(train_dataset[0], train_dataset[1]) 
-testing_data = torch.utils.data.TensorDataset(test_dataset[0], test_dataset[1])
-sys.exit(1)
-
-# Defining model
+# Defining model.
 print('Initializing model.')
 input_size= recent_prices.size()[1]
 model = SimpleRegression(input_dim=input_size)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.MSELoss()
 
-# TODO: fix this. And look up what's the nicer way to do this.
-dataloader = torch.utils.data.DataLoader(training_data, batch_size=64, shuffle=True)
-test_dataloader = torch.utils.data.DataLoader(testing_data, batch_size=64, shuffle=True)
-
 
 # Training Loop.
-model.train()
-for epoch in range(200):  # loop over the dataset multiple times
+print('Beginning training.')
+for epoch in range(20):  # loop over the dataset multiple times
     running_loss = 0.0
-    for i, data in enumerate(dataloader, 0):
+    for i, data in enumerate(train_dataloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
       
@@ -92,7 +93,7 @@ for epoch in range(200):  # loop over the dataset multiple times
         loss.backward()
         optimizer.step()
 
-        # print loss
+        # Printing loss
         running_loss += loss.item()
         if i % 20 == 19:    # print every 2000 mini-batches
             print('[%d, %5d] loss: %.3f' %
@@ -111,6 +112,7 @@ model.eval()
 
 
 # Print result.
+# TODO: fix variable names.
 loss = criterion(model(test_data).squeeze(), test_labels)
 print("Test loss", loss.item())
 print("Unnormalized loss", loss*label_std)
