@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import sys
 import torch
 import torch.nn as nn
+from datetime import datetime
 from model import SimpleRegression
-
 
 def normalize_data(data):
     # We're assuming that data is a pd.Series object.
@@ -37,6 +37,10 @@ def make_dataloader(dataset, batch_size=64, shuffling=True):
     my_dataloader = torch.utils.data.DataLoader(tensor_dataset, batch_size=batch_size, shuffle=shuffling)
     return my_dataloader
 
+
+# TODO list:
+#   (1) Implement seeding.
+
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
 current_dir = os.getcwd() 
@@ -52,6 +56,21 @@ for directory in directories:
     if not os.path.exists(directory):
         os.makedirs(os.path.join(current_dir, directory))
 
+# Create a results log if it doesn't already exist.
+log_filename = os.path.join(current_dir, "results.txt")
+if not os.path.isfile(log_filename):
+    results_log = open(log_filename, "w+")
+    results_log.close()
+
+# Define time-stamp. (Will be used in saving files/results.)
+now = datetime.now()
+timestamp = datetime.timestamp(now)
+timestamp = datetime.fromtimestamp(timestamp)
+
+# WARNING: This code was developed locally on a machine without GPU.
+# Some debugging with .to(device) will be required when GPU is available.
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
 print('Pre-processing data.')
 # Filter dataset by certain values. Then, separate it into data and labels.
 recent_prices = houses_price[houses_price.year == 2013] 
@@ -62,32 +81,33 @@ recent_prices = normalize_data(recent_prices).fillna(-1.0)
 labels = normalize_data(labels)
 # Convert to Torch tensors.
 labels, recent_prices = torch.from_numpy(labels.to_numpy()).float(), torch.from_numpy(recent_prices.to_numpy()).float()
+labels.to(device), recent_prices.to(device)
 # Split dataset into two lists of [data_partion, labels].
 train_dataset, test_dataset = partition_data(data=recent_prices, labels=labels, training_percent=0.8)
 
 train_dataloader = make_dataloader(train_dataset)
-test_data, test_labels = test_dataset[0], test_dataset[1]
+test_data, test_labels = test_dataset[0].to(device), test_dataset[1].to(device)
 
 # Defining model.
 print('Initializing model.')
 input_size= recent_prices.size()[1]
-model = SimpleRegression(input_dim=input_size)
+model = SimpleRegression(input_dim=input_size).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.MSELoss()
-
+torch.manual_seed(42)  # Setting the seed.
 
 # Training Loop.
 print('Beginning training.')
-for epoch in range(20):  # loop over the dataset multiple times
+for epoch in range(2):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_dataloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
+        # Unpack the inputs, where the data is a list of [inputs, labels].
         inputs, labels = data
       
-        # zero the parameter gradients
+        # Zero the parameter gradients.
         optimizer.zero_grad()
 
-        # forward + backward + optimize
+        # Forward + backward + optimize.
         outputs = model(inputs).squeeze()
         loss = criterion(outputs, labels)
         loss.backward()
@@ -95,27 +115,34 @@ for epoch in range(20):  # loop over the dataset multiple times
 
         # Printing loss
         running_loss += loss.item()
-        if i % 20 == 19:    # print every 2000 mini-batches
+        if i % 20 == 19:    # Print every 2000 mini-batches.
             print('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 20))
             running_loss = 0.0
 
-torch.save(model.state_dict(), "our_model.tar")
+model_path = os.path.join('models', f'SimpleMLP_{timestamp}.tar')
+torch.save(model.state_dict(), model_path)
 
-# Test data
-# Load state dict from the disk (make sure it is the same name as above)
-state_dict = torch.load("our_model.tar")
+# Test data.
+# Load state dict from the disk.
+print('Beginning testing.')
+state_dict = torch.load(model_path)
 
 # Create a new model and load the state
 model.load_state_dict(state_dict)
 model.eval()
 
-
-# Print result.
-# TODO: fix variable names.
+# Calculate test results.
 loss = criterion(model(test_data).squeeze(), test_labels)
-print("Test loss", loss.item())
-print("Unnormalized loss", loss*label_std)
+unnormalized_loss = loss*label_std
+
+# Save results in a .txt file.
+loss_message = f"""{timestamp} --- Average test loss = {loss:0.8f} --- Unnormalized test loss = {unnormalized_loss:0.8f}\n"""
+results_log = open(log_filename, 'a+')
+results_log.write(loss_message)
+results_log.close()
+print('Done.')
+
 
 
 
