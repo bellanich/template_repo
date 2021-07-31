@@ -39,7 +39,12 @@ def make_dataloader(dataset, batch_size=64, shuffling=True):
 
 
 # TODO list:
-#   (1) Implement seeding.
+#   (1) Define variables that need to be parameter tuned. Use an args parser.
+#       Vars include: seed, lr, dropout_rate, epoch_num
+#   (2) Create stopping condition. If loss doesn't improve for 5 conseuctives batches, then break.
+#   (3) Update model_path name and the results_message based on hyper-parameters used.
+#   (4) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
+#   (5) Generate a pl_torch version of this script.
 
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
@@ -68,7 +73,7 @@ timestamp = datetime.timestamp(now)
 timestamp = datetime.fromtimestamp(timestamp)
 
 # WARNING: This code was developed locally on a machine without GPU.
-# Some debugging with .to(device) will be required when GPU is available.
+# Some debugging with .to(device) will be required when/if GPU is available.
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 print('Pre-processing data.')
