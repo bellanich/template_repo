@@ -41,10 +41,12 @@ def make_dataloader(dataset, batch_size=64, shuffling=True):
 # TODO list:
 #   (1) Define variables that need to be parameter tuned. Use an args parser.
 #       Vars include: seed, lr, dropout_rate, epoch_num
-#   (2) Create stopping condition. If loss doesn't improve for 5 conseuctives batches, then break.
-#   (3) Update model_path name and the results_message based on hyper-parameters used.
-#   (4) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
-#   (5) Generate a pl_torch version of this script.
+#   (2) Update model_path name and the results_message based on hyper-parameters used.
+#   (3) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
+#   (4) Generate a pl_torch version of this script.
+
+validation_freq = 20
+epoch_num = 200
 
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
@@ -101,9 +103,10 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.MSELoss()
 torch.manual_seed(42)  # Setting the seed.
 
-# Training Loop.
 print('Beginning training.')
-for epoch in range(2):  # loop over the dataset multiple times
+loss_log, early_stop = list(), False  # Used for conditional stopping.
+# Training loop -> loop over the dataset multiple times.
+for epoch in range(epoch_num):  
     running_loss = 0.0
     for i, data in enumerate(train_dataloader, 0):
         # Unpack the inputs, where the data is a list of [inputs, labels].
@@ -118,12 +121,33 @@ for epoch in range(2):  # loop over the dataset multiple times
         loss.backward()
         optimizer.step()
 
-        # Printing loss
+        # Printing loss.
         running_loss += loss.item()
-        if i % 20 == 19:    # Print every 2000 mini-batches.
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 20))
+        if i % validation_freq == validation_freq-1:    # Print every N mini-batches.
+            avg_loss = running_loss / validation_freq
+            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, avg_loss))
+
+            # Otherwise, add most recent loss to loss_log and delete first element.
+            if len(loss_log) == 5:  # Keep list as fixed length.
+
+                # Checking to see if it's time to stop training.
+                print(f'loss_log = {loss_log}, average_loss = {avg_loss}')
+                early_stop = (avg_loss >= np.array(loss_log)).all()
+
+                if early_stop:
+                    print(f'Terminating training at epoch {epoch}.')
+                    break
+                else:
+                    loss_log.pop(0)
+
+            loss_log.append(avg_loss)
+
+            # Reset loss.
             running_loss = 0.0
+
+    # No need to do another epoch.
+    if early_stop:
+        break
 
 model_path = os.path.join('models', f'SimpleMLP_{timestamp}.tar')
 torch.save(model.state_dict(), model_path)
