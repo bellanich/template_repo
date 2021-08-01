@@ -6,7 +6,7 @@ import sys
 import torch
 import torch.nn as nn
 from datetime import datetime
-from model import SimpleRegression
+from model import SimpleRegressionModel
 
 def normalize_data(data):
     # We're assuming that data is a pd.Series object.
@@ -45,8 +45,12 @@ def make_dataloader(dataset, batch_size=64, shuffling=True):
 #   (3) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
 #   (4) Generate a pl_torch version of this script.
 
-validation_freq = 20
-epoch_num = 200
+# Hyper-parameters to add to args parser.... 
+seed = 21
+validation_freq = 2
+epoch_num = 10
+dropout_rate = 0.3
+learn_rate = 0.001
 
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
@@ -77,6 +81,7 @@ timestamp = datetime.fromtimestamp(timestamp)
 # WARNING: This code was developed locally on a machine without GPU.
 # Some debugging with .to(device) will be required when/if GPU is available.
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+torch.manual_seed(seed)  
 
 print('Pre-processing data.')
 # Filter dataset by certain values. Then, separate it into data and labels.
@@ -98,10 +103,9 @@ test_data, test_labels = test_dataset[0].to(device), test_dataset[1].to(device)
 # Defining model.
 print('Initializing model.')
 input_size= recent_prices.size()[1]
-model = SimpleRegression(input_dim=input_size).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+model = SimpleRegressionModel(input_dim=input_size, dropout_rate=dropout_rate).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
 criterion = nn.MSELoss()
-torch.manual_seed(42)  # Setting the seed.
 
 print('Beginning training.')
 loss_log, early_stop = list(), False  # Used for conditional stopping.
@@ -127,16 +131,14 @@ for epoch in range(epoch_num):
             avg_loss = running_loss / validation_freq
             print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, avg_loss))
 
-            # Otherwise, add most recent loss to loss_log and delete first element.
-            if len(loss_log) == 5:  # Keep list as fixed length.
+            if len(loss_log) == 10:  # Keep list as fixed length of 10.
 
                 # Checking to see if it's time to stop training.
-                print(f'loss_log = {loss_log}, average_loss = {avg_loss}')
                 early_stop = (avg_loss >= np.array(loss_log)).all()
-
                 if early_stop:
                     print(f'Terminating training at epoch {epoch}.')
                     break
+                # Otherwise, add most recent loss to loss_log and delete first element.
                 else:
                     loss_log.pop(0)
 
@@ -167,6 +169,7 @@ unnormalized_loss = loss*label_std
 
 # Save results in a .txt file.
 loss_message = f"""{timestamp} --- Average test loss = {loss:0.8f} --- Unnormalized test loss = {unnormalized_loss:0.8f}\n"""
+print(' --- '.join(loss_message.split(' --- ')[1:]))
 results_log = open(log_filename, 'a+')
 results_log.write(loss_message)
 results_log.close()

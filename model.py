@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class SimpleRegression(nn.Module):
+class SimpleRegressionModel(nn.Module):
 
     def __init__(self, input_dim, dropout_rate=0.3):
         super().__init__()
