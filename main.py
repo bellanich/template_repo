@@ -1,12 +1,21 @@
 import pandas as pd
 import numpy as np
 import os
-import matplotlib.pyplot as plt
 import sys
+
 import torch
 import torch.nn as nn
+
+import argparse
 from datetime import datetime
 from model import SimpleRegressionModel
+
+# TODO list:
+#   (2) Write bash script to do grid search.
+#   (3) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
+#   
+#   NEXT TASK: Generate a pl_torch version of this script.
+
 
 def normalize_data(data):
     # We're assuming that data is a pd.Series object.
@@ -38,19 +47,19 @@ def make_dataloader(dataset, batch_size=64, shuffling=True):
     return my_dataloader
 
 
-# TODO list:
-#   (1) Define variables that need to be parameter tuned. Use an args parser.
-#       Vars include: seed, lr, dropout_rate, epoch_num
-#   (2) Update model_path name and the results_message based on hyper-parameters used.
-#   (3) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
-#   (4) Generate a pl_torch version of this script.
+# Defining default hyperparameter values.
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--seed', default=42, type=int)
+parser.add_argument('-d', '--dropout_rate', default=0.3, type=float)
+parser.add_argument('-lr', '--learn_rate', default=0.001, type=float)
+parser.add_argument('-vf', '--validation_freq', default=20, type=int)
+parser.add_argument('-e', '--epoch_num', default=200, type=int)
+args = parser.parse_args()
 
-# Hyper-parameters to add to args parser.... 
-seed = 21
-validation_freq = 2
-epoch_num = 10
-dropout_rate = 0.3
-learn_rate = 0.001
+# Generating a hyperparameter description to add to results.txt.
+# This will be used in review_results.py to determine the optimal hyperparameter values.
+hyperparameters_description = ['='.join([arg, str(assigned_val)]) for arg, assigned_val in vars(args).items()]
+hyperparameters_description = ', '.join(hyperparameters_description)
 
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
@@ -81,7 +90,7 @@ timestamp = datetime.fromtimestamp(timestamp)
 # WARNING: This code was developed locally on a machine without GPU.
 # Some debugging with .to(device) will be required when/if GPU is available.
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-torch.manual_seed(seed)  
+torch.manual_seed(args.seed)  
 
 print('Pre-processing data.')
 # Filter dataset by certain values. Then, separate it into data and labels.
@@ -103,14 +112,14 @@ test_data, test_labels = test_dataset[0].to(device), test_dataset[1].to(device)
 # Defining model.
 print('Initializing model.')
 input_size= recent_prices.size()[1]
-model = SimpleRegressionModel(input_dim=input_size, dropout_rate=dropout_rate).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+model = SimpleRegressionModel(input_dim=input_size, dropout_rate=args.dropout_rate).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=args.learn_rate)
 criterion = nn.MSELoss()
 
 print('Beginning training.')
 loss_log, early_stop = list(), False  # Used for conditional stopping.
 # Training loop -> loop over the dataset multiple times.
-for epoch in range(epoch_num):  
+for epoch in range(args.epoch_num):  
     running_loss = 0.0
     for i, data in enumerate(train_dataloader, 0):
         # Unpack the inputs, where the data is a list of [inputs, labels].
@@ -127,8 +136,8 @@ for epoch in range(epoch_num):
 
         # Printing loss.
         running_loss += loss.item()
-        if i % validation_freq == validation_freq-1:    # Print every N mini-batches.
-            avg_loss = running_loss / validation_freq
+        if i % args.validation_freq == args.validation_freq-1:    # Print every N mini-batches.
+            avg_loss = running_loss / args.validation_freq
             print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, avg_loss))
 
             if len(loss_log) == 10:  # Keep list as fixed length of 10.
@@ -168,10 +177,15 @@ loss = criterion(model(test_data).squeeze(), test_labels)
 unnormalized_loss = loss*label_std
 
 # Save results in a .txt file.
-loss_message = f"""{timestamp} --- Average test loss = {loss:0.8f} --- Unnormalized test loss = {unnormalized_loss:0.8f}\n"""
-print(' --- '.join(loss_message.split(' --- ')[1:]))
+message_items = f'{timestamp}', \
+                    f'Average test loss = {loss:0.8f}', \
+                    f'Unnormalized test loss = {unnormalized_loss:0.8f} ', \
+                    f'Hyperparameters used: {hyperparameters_description} \n'
+results_message = ' --- '.join(message_items)
+# Only print out the average test loss and its unnormalized value.
+print(' --- '.join(results_message.split(' --- ')[1:-1]))
 results_log = open(log_filename, 'a+')
-results_log.write(loss_message)
+results_log.write(results_message)
 results_log.close()
 print('Done.')
 
