@@ -11,9 +11,6 @@ from datetime import datetime
 from model import SimpleRegressionModel
 
 """TODO list:
-    (1) FIX ARGS PARSER MESS: Options include....
-        (a) Delete args parser and change everything back to what it was. (And just forgot about param tuning). OR
-        (b) Rename main.py --> train.py AND make separate script called main.py that does param tuning.
 
     (2) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
 
@@ -54,9 +51,14 @@ def make_dataloader(dataset, batch_size=64, shuffling=True):
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--seed', default=42, type=int)
 parser.add_argument('-d', '--dropout_rate', default=0.3, type=float)
-parser.add_argument('-lr', '--learn_rate', default=0.001, type=float)
-parser.add_argument('-vf', '--validation_freq', default=20, type=int)
+parser.add_argument('-l', '--learn_rate', default=0.001, type=float)
+parser.add_argument('-v', '--validation_freq', default=20, type=int)
 parser.add_argument('-e', '--epoch_num', default=200, type=int)
+# Switch that suppresion of printing losses during training. Makes it easier to read from
+# command line during hyperparamter tuning.
+parser.add_argument('-p', '--print_updates', dest='print_updates', action='store_true')
+parser.add_argument('-n', '--no_print_updates', dest='print_updates', action='store_false')
+parser.set_defaults(print_updates=True)
 args = parser.parse_args()
 
 # Generating a hyperparameter description to add to results.txt.
@@ -141,7 +143,9 @@ for epoch in range(args.epoch_num):
         running_loss += loss.item()
         if i % args.validation_freq == args.validation_freq-1:    # Print every N mini-batches.
             avg_loss = running_loss / args.validation_freq
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, avg_loss))
+
+            if args.print_updates:
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, avg_loss))
 
             if len(loss_log) == 10:  # Keep list as fixed length of 10.
 
@@ -190,7 +194,8 @@ print(' --- '.join(results_message.split(' --- ')[1:-1]))
 results_log = open(log_filename, 'a+')
 results_log.write(results_message)
 results_log.close()
-print('Done.')
+
+print('Done.\n')
 
 
 
