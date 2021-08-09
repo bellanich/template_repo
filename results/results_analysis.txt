@@ -1,0 +1,11 @@
+Out of the 16 trained models we have, the model named '2021-08-02 18:58:44.566149 ' performed the best. The optimal hyperparameters were found to be: 
+ 
+	 seed=42
+	 dropout_rate=0.2
+	 learn_rate=0.001
+	 validation_freq=20
+	 epoch_num=200
+	 print_updates=False 
+ 
+ 
+The average loss across all 16 runs was 59553.68212890625 and the standard deviation was 1227.5284750965732.
