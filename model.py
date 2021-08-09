@@ -5,8 +5,10 @@ import torch.nn as nn
 class SimpleRegressionModel(nn.Module):
 
     def __init__(self, input_dim, dropout_rate=0.3):
+
         super().__init__()
-        # Initialize the modules we need to build the network
+        # Uses an output dimension of one, since this is a regression task
+        # and not a classification task.
         self.regression_model = nn.Sequential(nn.Linear(input_dim, 64),
 								   nn.Dropout(dropout_rate),
 								   nn.LeakyReLU(),

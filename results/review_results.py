@@ -3,8 +3,9 @@ import sys
 import numpy as np
 import textwrap
 """
-TODO: 
-	(1) Add some comments here to explain the script.
+	This script is intended to be executed after 'tune_parameters.py'. It reviews all of the results recorded in
+	'results.txt', returns some basic statistics about the performance of different models, and then identifies the
+	best performing model and its hyperparameters.
 """
 
 def reindent(s, numSpaces=0):

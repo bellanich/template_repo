@@ -3,6 +3,16 @@ import subprocess
 import sys
 
 
+"""
+	This script lets us do parameter tuning via grid search by executing 'train.py' for various hyperparameter values.
+	Each time 'train.py' is executed, model's results on the testing dataset are recorded in the file
+	'results/results.txt'. 
+
+	After executing this script, run 'results/review_results.py' to figure out what
+	the optimal set of hyperparameters is and what the best performing model is. (Those results will be
+	published in 'results_analysis.txt'.)
+"""
+
 # Get file path of training script.
 current_dir = os.getcwd()
 training_script = os.path.join(current_dir, 'train.py')

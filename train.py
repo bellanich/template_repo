@@ -10,11 +10,10 @@ import argparse
 from datetime import datetime
 from model import SimpleRegressionModel
 
-"""TODO list:
-
-    (2) Make a small SEPARATE script that takes results.txt and outputs the best set of found hyperparameters.
-
-    NEXT TASK: Generate a pl_torch version of this script.
+"""
+    This script trains, tests, and saves a simple regression model. It can be run on its own, but also
+    using 'tune_parameters.py'. In 'tune_parameters.py', we execute this script using different 
+    hyperparameter values to do hyperparameter tuning.
 """
 
 def normalize_data(data):
@@ -76,13 +75,13 @@ houses_price = pd.read_csv(data_path, low_memory=False)
 print('File loaded.')
 
 # Create necessary directories if they don't already exist.
-directories = ['figures', 'models']
+directories = ['figures', 'models', 'results']
 for directory in directories:
     if not os.path.exists(directory):
         os.makedirs(os.path.join(current_dir, directory))
 
 # Create a results log if it doesn't already exist.
-log_filename = os.path.join(current_dir, "results.txt")
+log_filename = os.path.join(current_dir, 'results', 'results.txt')
 if not os.path.isfile(log_filename):
     results_log = open(log_filename, "w+")
     results_log.close()
@@ -173,10 +172,10 @@ torch.save(model.state_dict(), model_path)
 # Test data.
 # Load state dict from the disk.
 print('Beginning testing.')
-state_dict = torch.load(model_path)
 
-# Create a new model and load the state
-model.load_state_dict(state_dict)
+# How to load saved model for further testing. (If necessary.)
+# state_dict = torch.load(model_path)
+# model.load_state_dict(state_dict)  
 model.eval()
 
 # Calculate test results.
