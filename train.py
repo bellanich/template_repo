@@ -55,7 +55,7 @@ parser.add_argument('-l', '--learn_rate', default=0.001, type=float)
 parser.add_argument('-v', '--validation_freq', default=20, type=int)
 parser.add_argument('-e', '--epoch_num', default=200, type=int)
 # Switch that suppresion of printing losses during training. Makes it easier to read from
-# command line during hyperparamter tuning.
+# command line during hyperparameter tuning.
 parser.add_argument('-p', '--print_updates', dest='print_updates', action='store_true')
 parser.add_argument('-n', '--no_print_updates', dest='print_updates', action='store_false')
 parser.set_defaults(print_updates=True)
