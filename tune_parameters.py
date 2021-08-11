@@ -14,12 +14,11 @@ import sys
 """
 
 # Get file path of training script.
-use_pl_torch = True
+# Switch that either execute pl_torch or torch version of training script.
+use_pl = False  
 current_dir = os.getcwd()
-training_script = 'train_v01_torch.py' else'train_v02_pltorch.py' if use_pl_torch
-print(training_script)
-sys.exit(1)
-# os.path.join(current_dir,
+training_script = os.path.join('v02_pl', 'train_v02_pl.py') if use_pl  else os.path.join('v01_torch','train_v01_torch.py') 
+training_script = os.path.join(current_dir, training_script)
 
 # Hyperparameter that we'll conduct a grid search over.
 seeds = [42, 13]
@@ -32,3 +31,4 @@ for seed in seeds:
 		for lr in learning_rates:
 			# Execute script. Note: '-n' suppresses print statements made in the training loop.
 			subprocess.run(["python", training_script, f"-s {seed}", f"-d {dropout_rate}", f"-l {lr}", "-n"])
+

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+import pathlib
 
 import torch
 import torch.nn as nn
@@ -68,18 +69,22 @@ hyperparameters_description = ', '.join(hyperparameters_description)
 
 # Reading and loading data as pandas Dataframe.
 print('Loading data')
-current_dir = os.getcwd() 
-data_path = os.path.join(current_dir,
+# A way to get the directory of this file independently of where we run python from.
+current_dir = pathlib.Path(__file__).parent.resolve()
+data_dir = os.path.dirname(current_dir)
+# print(f'My current data directory is {data_dir}')
+data_path = os.path.join(data_dir,
                         'data',
                         'Staten_Island_housing_market_case.csv')
 houses_price = pd.read_csv(data_path, low_memory=False)
 print('File loaded.')
 
 # Create necessary directories if they don't already exist.
-directories = ['figures', 'models', 'results']
+directories = ['models', 'results']
 for directory in directories:
-    if not os.path.exists(directory):
-        os.makedirs(os.path.join(current_dir, directory))
+    missing_dir = os.path.join(current_dir, directory)  # The directory we want to create.
+    if not os.path.exists(missing_dir):
+        os.makedirs(missing_dir)
 
 # Create a results log if it doesn't already exist.
 log_filename = os.path.join(current_dir, 'results', 'results.txt')
@@ -174,7 +179,7 @@ for epoch in range(args.epoch_num):
     if early_stop:
         break
 
-model_path = os.path.join('models', f'SimpleMLP_{timestamp}.tar')
+model_path = os.path.join(current_dir, 'models', f'SimpleMLP_{timestamp}.tar')
 torch.save(model.state_dict(), model_path)
 
 # Test data.
