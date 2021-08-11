@@ -14,8 +14,12 @@ import sys
 """
 
 # Get file path of training script.
+use_pl_torch = True
 current_dir = os.getcwd()
-training_script = os.path.join(current_dir, 'train.py')
+training_script = 'train_v01_torch.py' else'train_v02_pltorch.py' if use_pl_torch
+print(training_script)
+sys.exit(1)
+# os.path.join(current_dir,
 
 # Hyperparameter that we'll conduct a grid search over.
 seeds = [42, 13]
