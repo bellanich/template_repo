@@ -102,8 +102,8 @@ timestamp = datetime.fromtimestamp(timestamp)
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 # GPU operations have a separate seed we also want to set.
 if torch.cuda.is_available():
-    torch.cuda.manual_seed(42)
-    torch.cuda.manual_seed_all(42)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 # Additionally, some operations on a GPU are implemented stochastic for efficiency
 # We want to ensure that all operations are deterministic on GPU (if used) for reproducibility
 torch.backends.cudnn.determinstic = True
