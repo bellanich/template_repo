@@ -1,7 +1,11 @@
 # Directories to ignore:
 data/
 models/
+results_v01/
+
+# .txt file outputs to ignore
 results.txt
+results_analysis.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
