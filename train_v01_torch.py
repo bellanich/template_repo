@@ -16,6 +16,7 @@ from model import SimpleRegressionModel
     hyperparameter values to do hyperparameter tuning.
 """
 
+
 def normalize_data(data):
     # We're assuming that data is a pd.Series object.
     norm_data = (data-data.mean())/data.std()
@@ -91,10 +92,17 @@ now = datetime.now()
 timestamp = datetime.timestamp(now)
 timestamp = datetime.fromtimestamp(timestamp)
 
-# WARNING: This code was developed locally on a machine without GPU.
+# WARNING: This script was developed locally on a machine without GPU.
 # Some debugging with .to(device) will be required when/if GPU is available.
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-torch.manual_seed(args.seed)  
+# GPU operations have a separate seed we also want to set.
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+    torch.cuda.manual_seed_all(42)
+# Additionally, some operations on a GPU are implemented stochastic for efficiency
+# We want to ensure that all operations are deterministic on GPU (if used) for reproducibility
+torch.backends.cudnn.determinstic = True
+torch.backends.cudnn.benchmark = False
 
 print('Pre-processing data.')
 # Filter dataset by certain values. Then, separate it into data and labels.
